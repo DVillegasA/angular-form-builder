@@ -71,7 +71,21 @@
             placeholder: $scope.placeholder,
             required: $scope.required,
             optionsText: $scope.optionsText,
-            validation: $scope.validation
+            validation: $scope.validation,
+            customOptions: {
+              sender: $scope.customOptions.sender,
+              min: $scope.customOptions.min,
+              max: $scope.customOptions.max,
+              minDouble: $scope.customOptions.minDouble,
+              maxDouble: $scope.customOptions.maxDouble,
+              date: $scope.customOptions.date,
+              order: $scope.customOptions.order,
+              identifier: $scope.customOptions.identifier,
+              code: $scope.customOptions.code,
+              showProp: $scope.customOptions.showProp,
+              company: $scope.customOptions.company,
+              codeLong: $scope.customOptions.codeLong
+            }
           };
         },
         rollback: function() {
@@ -87,6 +101,7 @@
           $scope.placeholder = this.model.placeholder;
           $scope.required = this.model.required;
           $scope.optionsText = this.model.optionsText;
+          $scope.customOptions = this.model.customOptions;
           return $scope.validation = this.model.validation;
         }
       };
@@ -321,8 +336,7 @@
               html: true,
               title: scope.$component.label,
               content: popover.view,
-              container: 'body',
-              placement: $builder.config.popoverPlacement
+              container: 'body'
             });
           });
           scope.popover = {
@@ -334,7 +348,9 @@
               $event.preventDefault();
               $validator.validate(scope).success(function() {
                 popover.isClickedSave = true;
-                return $(element).popover('hide');
+                $(element).popover('hide');
+                $(element).triggerHandler('click');
+                $(element).attr('disabled', false);
               });
             },
             remove: function($event) {
@@ -351,6 +367,7 @@
               /*
               The shown event of the popover.
                */
+
               scope.data.backup();
               return popover.isClickedSave = false;
             },
@@ -359,11 +376,18 @@
               /*
               The cancel event of the popover.
                */
+
               scope.data.rollback();
               if ($event) {
                 $event.preventDefault();
                 $(element).popover('hide');
+                $(element).triggerHandler('click');
+                $(element).attr('disabled', false);
               }
+            },
+            kill: function(){
+              scope.data.rollback();
+              $(element).popover('hide');
             }
           };
           $(element).on('show.bs.popover', function() {
@@ -493,14 +517,14 @@
           if (scope.$component.arrayToText) {
             scope.inputArray = [];
             scope.$watch('inputArray', function(newValue, oldValue) {
-              var checked, index, _ref;
+              var checked, index;
               if (newValue === oldValue) {
                 return;
               }
               checked = [];
               for (index in scope.inputArray) {
                 if (scope.inputArray[index]) {
-                  checked.push((_ref = scope.options[index]) != null ? _ref : scope.inputArray[index]);
+                  checked.push(scope.options[index]);
                 }
               }
               return scope.inputText = checked.join(', ');
@@ -528,7 +552,7 @@
           if (!scope.$component.arrayToText && scope.formObject.options.length > 0) {
             scope.inputText = scope.formObject.options[0];
           }
-          return scope.$watch("default['" + scope.formObject.id + "']", function(value) {
+          return scope.$watch("default[" + scope.formObject.id + "]", function(value) {
             if (!value) {
               return;
             }
@@ -981,9 +1005,7 @@
     $injector = null;
     $http = null;
     $templateCache = null;
-    this.config = {
-      popoverPlacement: 'right'
-    };
+    this.version = '0.0.2';
     this.components = {};
     this.groups = [];
     this.broadcastChannel = {
@@ -991,6 +1013,9 @@
     };
     this.forms = {
       "default": []
+    };
+    this.formsId = {
+      "default": 0
     };
     this.convertComponent = function(name, component) {
       var result, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
@@ -1020,7 +1045,7 @@
       return result;
     };
     this.convertFormObject = function(name, formObject) {
-      var component, result, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
+      var component, exist, form, result, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
       if (formObject == null) {
         formObject = {};
       }
@@ -1028,17 +1053,33 @@
       if (component == null) {
         throw "The component " + formObject.component + " was not registered.";
       }
+      if (formObject.id) {
+        exist = false;
+        _ref = this.forms[name];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          form = _ref[_i];
+          if (!(formObject.id <= form.id)) {
+            continue;
+          }
+          formObject.id = this.formsId[name]++;
+          exist = true;
+          break;
+        }
+        if (!exist) {
+          this.formsId[name] = formObject.id + 1;
+        }
+      }
       result = {
-        id: formObject.id,
+        id: (_ref1 = formObject.id) != null ? _ref1 : this.formsId[name]++,
         component: formObject.component,
-        editable: (_ref = formObject.editable) != null ? _ref : component.editable,
-        index: (_ref1 = formObject.index) != null ? _ref1 : 0,
-        label: (_ref2 = formObject.label) != null ? _ref2 : component.label,
-        description: (_ref3 = formObject.description) != null ? _ref3 : component.description,
-        placeholder: (_ref4 = formObject.placeholder) != null ? _ref4 : component.placeholder,
-        options: (_ref5 = formObject.options) != null ? _ref5 : component.options,
-        required: (_ref6 = formObject.required) != null ? _ref6 : component.required,
-        validation: (_ref7 = formObject.validation) != null ? _ref7 : component.validation
+        editable: (_ref2 = formObject.editable) != null ? _ref2 : component.editable,
+        index: (_ref3 = formObject.index) != null ? _ref3 : 0,
+        label: (_ref4 = formObject.label) != null ? _ref4 : component.label,
+        description: (_ref5 = formObject.description) != null ? _ref5 : component.description,
+        placeholder: (_ref6 = formObject.placeholder) != null ? _ref6 : component.placeholder,
+        options: (_ref7 = formObject.options) != null ? _ref7 : component.options,
+        required: (_ref8 = formObject.required) != null ? _ref8 : component.required,
+        validation: (_ref9 = formObject.validation) != null ? _ref9 : component.validation
       };
       return result;
     };
@@ -1137,7 +1178,7 @@
     })(this);
     this.insertFormObject = (function(_this) {
       return function(name, index, formObject) {
-        var _base;
+        var _base, _base1;
         if (formObject == null) {
           formObject = {};
         }
@@ -1147,7 +1188,7 @@
         @param name: The form name.
         @param index: The form object index.
         @param form: The form object.
-            id: The form object id.
+            id: {int} The form object id. It will be generate by $builder if not asigned.
             component: {string} The component name
             editable: {bool} Is the form object editable? (default is yes)
             label: {string} The form object label.
@@ -1161,6 +1202,9 @@
          */
         if ((_base = _this.forms)[name] == null) {
           _base[name] = [];
+        }
+        if ((_base1 = _this.formsId)[name] == null) {
+          _base1[name] = 0;
         }
         if (index > _this.forms[name].length) {
           index = _this.forms[name].length;
@@ -1216,7 +1260,7 @@
             _this.loadTemplate(component);
           }
           return {
-            config: _this.config,
+            version: _this.version,
             components: _this.components,
             groups: _this.groups,
             forms: _this.forms,
